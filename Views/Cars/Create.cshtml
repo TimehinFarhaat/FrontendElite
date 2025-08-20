@@ -1,0 +1,135 @@
+﻿@model CreateCarRequest
+@{
+    ViewBag.Title = "Create Car";
+}
+
+<div class="d-flex justify-content-center align-items-center" style="min-height:90vh;">
+    <div class="card card-custom p-4" style="max-width:600px; width:100%;">
+        <h3 class="page-title">@(ViewBag.Title ?? "Car Form")</h3>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger text-center">@ViewBag.Error</div>
+        }
+        @if (ViewBag.Message != null)
+        {
+            <div class="alert alert-success text-center">@ViewBag.Message</div>
+        }
+
+        <form asp-action="@(ViewBag.Action ?? "Create")" enctype="multipart/form-data" method="post" onsubmit="return startLoading(this)">
+            <div class="mb-3">
+                <label asp-for="Make" class="form-label"></label>
+                <input asp-for="Make" class="form-control" placeholder="Enter car make" />
+                <span asp-validation-for="Make" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Model" class="form-label"></label>
+                <input asp-for="Model" class="form-control" placeholder="Enter car model" />
+                <span asp-validation-for="Model" class="text-danger small"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Year" class="form-label"></label>
+                    <input asp-for="Year" class="form-control" type="number" min="1886" max="2025" placeholder="2025" />
+                    <span asp-validation-for="Year" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Price" class="form-label"></label>
+                    <input asp-for="Price" class="form-control" type="number" step="0.01" placeholder="20000" />
+                    <span asp-validation-for="Price" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Write a short description"></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Images" class="form-label"></label>
+                <input asp-for="Images" type="file" class="form-control" multiple />
+                <span asp-validation-for="Images" class="text-danger small"></span>
+            </div>
+
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-custom w-100">
+                <span id="btnText">@(ViewBag.Action == "Edit" ? "Update" : "Create")</span>
+                <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+            </button>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        $(document).ready(function () {
+            const form = $("form");
+            const submitBtn = $("#submitBtn");
+
+            function toggleButton() {
+                // keep button enabled, let validation handle errors
+                submitBtn.prop("disabled", false);
+            }
+
+            // Run once at start
+            toggleButton();
+
+            // Re-check whenever input changes
+            form.on("keyup change", "input, textarea, select", function () {
+                toggleButton();
+            });
+            $.validator.addMethod("requiredfile", function (value, element) {
+                return element.files && element.files.length > 0;
+            }, "Please select at least one image.");
+
+            // Attach to Images input
+            $("input[name='Images']").rules("add", { requiredfile: true });
+        });
+
+        // Start loading only if form is valid
+        function startLoading(form) {
+            if (!$(form).valid()) {
+                // ❌ Form invalid → don't disable or show spinner
+                return false;
+            }
+
+            // ✅ Form valid → show loading state
+            const btn = document.getElementById("submitBtn");
+            const text = document.getElementById("btnText");
+            const spinner = document.getElementById("btnSpinner");
+
+            btn.disabled = true;
+            spinner.classList.remove("d-none");
+            text.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Creating...';
+
+            return true; // allow form to submit
+        }
+
+        // Live image preview
+        document.getElementById('imageInput')?.addEventListener('change', function (event) {
+            const previewContainer = document.getElementById('imagePreview');
+            previewContainer.innerHTML = "";
+            Array.from(event.target.files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = "img-thumbnail shadow-sm";
+                    img.style.width = "80px";
+                    img.style.height = "60px";
+                    img.style.objectFit = "cover";
+                    img.style.borderRadius = "8px";
+                    previewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+    </script>
+}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">

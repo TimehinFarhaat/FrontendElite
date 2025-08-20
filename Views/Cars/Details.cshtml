@@ -1,0 +1,343 @@
+﻿@model CarDto
+@{
+    var apiBaseUrl = string.IsNullOrWhiteSpace(ViewBag.ApiBaseUrl)
+    ? "https://localhost:7267"
+    : ViewBag.ApiBaseUrl;
+
+    var svgFallback = "data:image/svg+xml;base64,...";
+    bool isAdmin = Context.Session.GetString("IsAdmin") == "true";
+}
+<!-- Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer"></div>
+
+
+<div class="detail-wrapper">
+
+    <!-- Header -->
+    <header class="car-header">
+        <div>
+            <h1 class="car-title">@Model.Make @Model.Model</h1>
+            <div class="car-meta">
+                <span><i class="bi bi-calendar3"></i> @Model.Year</span>
+                <span><i class="bi bi-currency-dollar"></i> @Model.Price.ToString("C")</span>
+            </div>
+        </div>
+        <div class="car-actions">
+            @if (!isAdmin)
+            {
+                <button class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#inquiryModal">
+                    <i class="bi bi-envelope-plus"></i> Inquiry
+                </button>
+            }
+            @if (isAdmin)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-rounded">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline"
+                      onsubmit="return confirm('Delete this car?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-rounded">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            }
+        </div>
+    </header>
+
+    <!-- Description -->
+    <div class="card-section">
+        <p class="car-description">@Model.Description</p>
+    </div>
+
+    <!-- Carousel -->
+    @if (Model.Images != null && Model.Images.Any())
+    {
+        <div class="carousel-container mt-2">
+            <div id="carousel-@Model.Id" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-inner rounded shadow-sm">
+                    @{
+                        int idx = 0;
+                    }
+                    @foreach (var img in Model.Images)
+                    {
+                        <div class="carousel-item @(idx == 0 ? "active" : "")">
+                            <img src="@(apiBaseUrl + "/" + img.ImageUrl)"
+                                 class="carousel-img"
+                                 onerror="this.src='@svgFallback'" />
+                        </div>
+                        idx++;
+                    }
+                </div>
+                @if (Model.Images.Count > 1)
+                {
+                    <button class="carousel-control-prev" type="button" data-bs-target="#carousel-@Model.Id" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#carousel-@Model.Id" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                }
+            </div>
+
+            <div class="thumbnails mt-3">
+                @{
+                    int idxThumb = 0;
+                }
+                @foreach (var img in Model.Images)
+                {
+                    <img src="@(apiBaseUrl + "/" + img.ImageUrl)"
+                         class="thumb-img"
+                         data-bs-target="#carousel-@Model.Id"
+                         data-bs-slide-to="@idxThumb"
+                         onerror="this.src='@svgFallback'" />
+                    idxThumb++;
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">No images available.</div>
+    }
+
+    <div class="d-flex justify-content-end mt-4">
+        <a asp-controller="Cars" asp-action="Index" class="btn btn-primary rounded-pill shadow-sm">
+            BackToList <i class="bi bi-arrow-right ms-2"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Inquiry Modal -->
+@if (!isAdmin)
+{
+    <div class="modal fade" id="inquiryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content modal-glass">
+                <div class="modal-header modal-gradient text-white">
+                    <h5 class="modal-title"><i class="bi bi-chat-left-text"></i> Inquiry for @Model.Make @Model.Model</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form asp-controller="Inquiries" asp-action="CreateInquiry" method="post" class="p-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="CarId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Name</label>
+                        <input type="text" name="Name" class="form-control rounded-3 shadow-sm" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="Email" class="form-control rounded-3 shadow-sm" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Message</label>
+                        <textarea name="Message" class="form-control rounded-3 shadow-sm" rows="3" required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-gradient">Send</button>
+                        <button type="button" class="btn btn-outline-secondary btn-rounded" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('img[data-bs-slide-to]').forEach(img => {
+            img.addEventListener('click', function () {
+                const target = this.getAttribute('data-bs-target');
+                const slide = parseInt(this.getAttribute('data-bs-slide-to'));
+                const carouselEl = document.querySelector(target);
+                const bsCarousel = bootstrap.Carousel.getInstance(carouselEl)
+                    || new bootstrap.Carousel(carouselEl, { ride: false });
+                bsCarousel.to(slide);
+
+                document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active-thumb'));
+                this.classList.add('active-thumb');
+            });
+        });
+
+
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+
+            toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+
+            container.appendChild(toastEl);
+
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        // Automatically show toast if TempData exists
+        @if (TempData["Message"] != null)
+        {
+            <text>
+                showToast("@TempData["Message"]", "@(TempData["MessageType"] ?? "success")");
+            </text>
+        }
+    </script>
+}
+
+<style>
+    /* Global background */
+    html, body {
+        height: 100%;
+        margin: 0;
+        background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden; /* no page scroll */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Card wrapper */
+    .detail-wrapper {
+        height: 95%;
+        width: 95%;
+        max-width: 1100px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 24px;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+        overflow: hidden;
+    }
+
+    /* Header section */
+    .car-header {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .car-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0;
+        color: #222;
+    }
+
+    .car-meta {
+        display: flex;
+        gap: 1.2rem;
+        font-size: 1rem;
+        color: #666;
+    }
+
+    /* Section cards */
+    .card-section {
+        background: #fafafa;
+        border-radius: 14px;
+        padding: 1rem;
+        box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .car-description {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #444;
+        max-height: 140px;
+        overflow-y: auto;
+        padding-right: .5rem;
+    }
+
+    /* Carousel */
+    .carousel-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .carousel-img {
+        width: 100%;
+        max-height: 360px;
+        object-fit: cover;
+        border-radius: 16px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+
+    .thumbnails {
+        display: flex;
+        gap: .6rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: .75rem;
+    }
+
+    .thumb-img {
+        width: 75px;
+        height: 55px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform .2s, border .2s, box-shadow .2s;
+    }
+
+        .thumb-img:hover {
+            transform: scale(1.07);
+            border-color: #007bff;
+            box-shadow: 0 0 8px rgba(0,123,255,0.4);
+        }
+
+        .thumb-img.active-thumb {
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0,123,255,0.5);
+        }
+
+    /* Buttons */
+    .btn-gradient {
+        background: linear-gradient(90deg, #007bff, #00c6ff);
+        border: none;
+        color: #fff !important;
+        padding: 0.5rem 1.3rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.25);
+        transition: all .2s;
+    }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,123,255,0.35);
+        }
+
+    .btn-rounded {
+        border-radius: 10px !important;
+    }
+
+    /* Modal */
+    .modal-glass {
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(14px);
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .modal-gradient {
+        background: linear-gradient(135deg, #007bff, #00c6ff);
+    }
+</style>

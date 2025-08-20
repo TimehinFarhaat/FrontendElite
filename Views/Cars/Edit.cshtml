@@ -1,0 +1,227 @@
+﻿@model UpdateCarRequest
+@{
+    ViewBag.Title = "Edit Car";
+    var carDto = ViewBag.CarDto as CarDto;
+    var apiBaseUrl = string.IsNullOrWhiteSpace(ViewBag.ApiBaseUrl)
+    ? "https://localhost:7267"
+    : ViewBag.ApiBaseUrl;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg border-0 rounded-4 p-4 animate-fade">
+                <h3 class="text-center text-primary mb-4 fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Car
+                </h3>
+
+                <!-- Alerts -->
+                <div id="alertContainer"></div>
+
+                <!-- Form -->
+                <form id="editCarForm" enctype="multipart/form-data">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="row g-3">
+                        <!-- Basic Car Info -->
+                        <div class="col-md-6">
+                            <label asp-for="Make" class="form-label fw-bold"></label>
+                            <input asp-for="Make" class="form-control shadow-sm" placeholder="@carDto?.Make" />
+                            @Html.ValidationMessageFor(m => m.Make, "", new { @class = "text-danger small" })
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Model" class="form-label fw-bold"></label>
+                            <input asp-for="Model" class="form-control shadow-sm" placeholder="@carDto?.Model" />
+                            @Html.ValidationMessageFor(m => m.Model, "", new { @class = "text-danger small" })
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Year" class="form-label fw-bold"></label>
+                            <input asp-for="Year" type="number" class="form-control shadow-sm" min="1886" max="2025" placeholder="@carDto?.Year" />
+                            @Html.ValidationMessageFor(m => m.Year, "", new { @class = "text-danger small" })
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Price" class="form-label fw-bold"></label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="Price" type="number" step="0.01" class="form-control" placeholder="@carDto?.Price" />
+                            </div>
+                            @Html.ValidationMessageFor(m => m.Price, "", new { @class = "text-danger small" })
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Description" class="form-label fw-bold"></label>
+                            <textarea asp-for="Description" placeholder="@carDto?.Description" rows="3" class="form-control shadow-sm"></textarea>
+                            @Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-danger small" })
+                        </div>
+
+                        <!-- Existing Images -->
+                        <div class="d-flex flex-wrap gap-2 border rounded p-2 bg-light">
+                            @if (carDto?.Images != null && carDto.Images.Any())
+                            {
+                                foreach (var img in carDto.Images)
+                                {
+                                    <div class="position-relative">
+                                        <img src="@($"{apiBaseUrl}/{img.ImageUrl}")"
+                                             class="img-thumbnail shadow-sm rounded"
+                                             style="width: 100px; height: 75px; object-fit: cover;" />
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                                onclick="deleteCarImage('@carDto.Id', '@img.Id', this)">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted fst-italic">No images available</span>
+                            }
+                        </div>
+
+                        <!-- Upload New Images -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Upload New Images (optional)</label>
+                            <input type="file" asp-for="Images" class="form-control shadow-sm" multiple accept=".jpg,.jpeg,.png" id="imageInput" />
+                            <small class="text-muted">You can select multiple images (JPG, JPEG, PNG).</small>
+                            <div id="imagePreview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="col-12">
+                            <button id="submitBtn" type="submit" class="btn btn-primary w-100">
+                                <span id="btnText">Update Car</span>
+                                <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('editCarForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const alertContainer = document.getElementById('alertContainer');
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+
+            // Image preview
+            imageInput?.addEventListener('change', (event) => {
+                imagePreview.innerHTML = "";
+                Array.from(event.target.files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = "img-thumbnail shadow-sm rounded";
+                        img.style.width = "100px";
+                        img.style.height = "75px";
+                        img.style.objectFit = "cover";
+                        imagePreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            // Delete image
+            window.deleteCarImage = async (carId, imageId, btn) => {
+                if (!confirm("Are you sure you want to delete this image?")) return;
+
+                try {
+                    const res = await fetch(`${apiBaseUrl}/api/Cars/${carId}/carImage/${imageId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (res.ok) {
+                        btn.closest('div.position-relative').remove();
+                    } else {
+                        let errorMsg = "Failed to delete image.";
+
+                        // Try to read backend response as JSON or text
+                        try {
+                            const contentType = res.headers.get("content-type");
+                            if (contentType && contentType.includes("application/json")) {
+                                const errorData = await res.json();
+                                errorMsg = errorData.message || JSON.stringify(errorData);
+                            } else {
+                                errorMsg = await res.text();
+                            }
+                        } catch (e) {
+                            console.error("Error parsing backend error:", e);
+                        }
+
+                        alert(errorMsg);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Error deleting image. " + err.message);
+                }
+            };
+
+
+            // AJAX form submit
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault(); // prevent page reload
+
+                submitBtn.disabled = true;
+                btnSpinner.classList.remove('d-none');
+                btnText.innerText = "Updating...";
+
+                const formData = new FormData(form);
+                const carId = formData.get('Id');
+
+                try {
+                    const res = await fetch(`${apiBaseUrl}/api/Cars/${carId}/updateCar`, {
+                        method: 'PUT', // match your controller
+                        body: formData,
+                        credentials: 'include'
+                    });
+
+                    if (res.ok) {
+                        alertContainer.innerHTML = `<div class="alert alert-success">Car updated successfully!</div>`;
+                        setTimeout(() => window.location.href = '/Cars/Index', 2000); // redirect after 2s
+                    } else {
+                        const errText = await res.text();
+                        alertContainer.innerHTML = `<div class="alert alert-danger">Failed to update car. ${errText}</div>`;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alertContainer.innerHTML = `<div class="alert alert-danger">Error updating car.</div>`;
+                } finally {
+                    submitBtn.disabled = false;
+                    btnSpinner.classList.add('d-none');
+                    btnText.innerText = "Update Car";
+                }
+            });
+
+        });
+    </script>
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .animate-fade {
+        animation: fadeInUp 0.6s ease-in-out;
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

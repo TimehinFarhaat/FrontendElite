@@ -1,0 +1,32 @@
+body {
+    background: linear-gradient(135deg, #f9fafc, #eef2f7);
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #0d6efd;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.card-custom {
+    border-radius: 1rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease;
+}
+
+    .card-custom:hover {
+        transform: translateY(-4px);
+    }
+
+.btn-custom {
+    border-radius: 50px;
+    padding: 0.45rem 1.2rem;
+}
+
+.form-label {
+    font-weight: 600;
+}

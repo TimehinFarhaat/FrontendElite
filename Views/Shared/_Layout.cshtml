@@ -1,0 +1,110 @@
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EliteCars</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Site CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light text-dark">
+
+    <!-- NAVBAR -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center gap-2" asp-area="" asp-controller="Home" asp-action="Index">
+                    <img src="https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=80&q=60"
+                         alt="EliteCars logo"
+                         class="rounded-2"
+                         style="height:38px; width:38px; object-fit:cover;">
+                    <span class="fw-semibold text-primary">EliteCars</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Cars" asp-action="Index">Inventory</a>
+                        </li>
+                        <li class="nav-item ms-lg-3 mt-2 mt-lg-0">
+                            
+                            @{
+                                var isAdmin = HttpContextAccessor?.HttpContext?.Session.GetString("IsAdmin") == "true";
+                            }
+
+                            @if (isAdmin)
+                            {
+                                <form method="post" asp-area="" asp-controller="Admin" asp-action="Logout" class="d-inline">
+                                    <button type="submit" class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm">
+                                        Logout
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <a class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm"
+                                   asp-area="" asp-controller="Admin" asp-action="Login">
+                                    Admin
+                                </a>
+                            }
+                        </li>
+
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN -->
+    <main class="flex-grow-1">
+        <div class="container py-5">
+            <main role="main">
+                @RenderBody()
+            </main>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-top py-4 mt-auto">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+            <div class="text-muted small">
+                &copy; @DateTime.Now.Year EliteCars. All rights reserved.
+            </div>
+            <div class="d-flex gap-3 small">
+                <a href="#" class="text-muted text-decoration-none">Privacy</a>
+                <a href="#" class="text-muted text-decoration-none">Terms</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Init bootstrap carousels if used
+        (function () {
+            const elems = document.querySelectorAll('.carousel');
+            elems.forEach(c => new bootstrap.Carousel(c, { ride: false, interval: 5000 }));
+        })();
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

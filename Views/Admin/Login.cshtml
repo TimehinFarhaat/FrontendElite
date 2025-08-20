@@ -1,0 +1,164 @@
+﻿@{
+    ViewData["Title"] = "Admin Login";
+    var returnUrl = ViewData["ReturnUrl"] as string ?? "";
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Admin Login";
+}
+
+<style>
+    /* Prevent scrolling */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #141E30, #243B55);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Card container */
+    .login-card {
+        width: 100%;
+        max-width: 380px;
+        padding: 2.5rem;
+        background: #ffffff;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .login-card h3 {
+        text-align: center;
+        margin-bottom: 1.8rem;
+        font-weight: 700;
+        color: #243B55;
+    }
+
+    /* Inputs */
+    .form-control {
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-size: 0.95rem;
+        border: 1px solid #ccc;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .form-control:focus {
+        border-color: #243B55;
+        box-shadow: 0 0 0 3px rgba(36, 59, 85, 0.2);
+    }
+
+    /* Button */
+    .btn-primary {
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-weight: bold;
+        background: #243B55;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: #141E30;
+        transform: translateY(-2px);
+    }
+
+    /* Alerts */
+    .alert {
+        border-radius: 12px;
+        font-size: 0.9rem;
+    }
+
+    /* Animation */
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+
+
+<div class="card shadow-lg p-4 rounded auth-card bg-white">
+    <h3 class="text-center mb-4 text-primary">Admin Login</h3>
+
+    <div id="alertContainer"></div>
+
+    <form id="loginForm">
+        <input type="hidden" id="returnUrl" name="returnUrl" value="@returnUrl" />
+        <div class="mb-3">
+            <label class="form-label fw-bold" for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold" for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" required />
+        </div>
+
+        <button id="loginBtn" type="submit" class="btn btn-primary w-100">
+            <span id="btnText">Login</span>
+            <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+        </button>
+    </form>
+</div>
+
+
+@section Scripts {
+    <script>
+        const form = document.getElementById("loginForm");
+        const btn = document.getElementById("loginBtn");
+        const text = document.getElementById("btnText");
+        const spinner = document.getElementById("btnSpinner");
+        const alertContainer = document.getElementById("alertContainer");
+
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            btn.disabled = true;
+            spinner.classList.remove("d-none");
+            text.textContent = "Logging in...";
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch("@Url.Action("Login", "Admin")", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                showAlert(result.success ? "success" : "danger", result.message);
+
+                if (result.success) {
+                    setTimeout(() => {
+                        const redirectUrl = result.returnUrl || "@Url.Action("Index", "Inquiries")";
+                        window.location.href = redirectUrl;
+                    }, 1000);
+                }
+            } catch (err) {
+                showAlert("danger", "An unexpected error occurred.");
+            }
+
+            btn.disabled = false;
+            spinner.classList.add("d-none");
+            text.textContent = "Login";
+        });
+
+        function showAlert(type, message) {
+            alertContainer.innerHTML = `
+                <div id="alertBox" class="alert alert-${type} text-center" role="alert">
+                    ${message}
+                </div>`;
+            setTimeout(() => {
+                const alertBox = document.getElementById("alertBox");
+                if (alertBox) {
+                    alertBox.style.transition = "opacity 0.5s";
+                    alertBox.style.opacity = 0;
+                    setTimeout(() => alertBox.remove(), 500);
+                }
+            }, 3000);
+        }
+    </script>
+}

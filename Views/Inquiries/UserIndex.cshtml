@@ -1,0 +1,273 @@
+﻿@model List<InquiryDto>
+@{
+    ViewData["Title"] = "My Inquiries";
+    var apiBaseUrl = string.IsNullOrWhiteSpace(ViewBag.ApiBaseUrl)
+        ? "https://localhost:7267"
+        : ViewBag.ApiBaseUrl;
+}
+
+<div class="chat-wrapper">
+    <h2 class="mb-3 text-primary fw-bold">💬 My Inquiries</h2>
+
+    <!-- Search -->
+    <div class="search-box mb-3 d-flex gap-2">
+        <input type="email" id="emailSearch" class="form-control" placeholder="Enter your email..." />
+        <button id="searchBtn" class="btn btn-gradient">Search</button>
+    </div>
+
+    <!-- Chat Area -->
+    <div id="inquiriesContainer" class="chat-box"></div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="mt-3 d-flex justify-content-center"></div>
+</div>
+
+<script>
+    const apiBaseUrl = "@apiBaseUrl";
+    let currentData = [];
+    let currentPage = 1;
+
+    async function fetchInquiries(email) {
+        try {
+            const response = await fetch(`${apiBaseUrl}/api/Inquiries/byEmail?email=${encodeURIComponent(email)}`);
+            if (!response.ok) throw new Error("Failed to fetch inquiries.");
+
+            currentData = await response.json();
+            currentPage = 1;
+            renderChat();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    function getRowsPerPage() {
+        const chatBox = document.getElementById("inquiriesContainer");
+        const bubbleHeight = 150; // estimated height of one inquiry + response
+        return Math.max(Math.floor(chatBox.clientHeight / bubbleHeight), 1);
+    }
+
+    function renderChat() {
+        const container = document.getElementById("inquiriesContainer");
+
+        if (!currentData.length) {
+            container.innerHTML = "<p class='text-muted text-center mt-3'>No inquiries found.</p>";
+            document.getElementById("pagination").innerHTML = "";
+            return;
+        }
+
+        const rowsPerPage = getRowsPerPage();
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageData = currentData.slice(start, end);
+
+        let chatHtml = "";
+        pageData.forEach(inquiry => {
+            const editable = !inquiry.response || inquiry.response === "No response yet";
+
+            chatHtml += `
+                    <div class="chat-bubble user">
+                        <div class="fw-bold">
+                            ${inquiry.name}
+                            <input type="email" id="email-${inquiry.id}" class="form-control form-control-sm mt-1" value="${inquiry.email}" />
+                        </div>
+                        <div class="text-muted small mb-1">🚗 ${inquiry.carMaker} - ${inquiry.carModel}</div>
+                        ${editable
+                    ? `<textarea id="message-${inquiry.id}" class="form-control form-control-sm mb-2">${inquiry.message}</textarea>
+                               <button class="btn btn-success btn-sm" onclick="updateInquiry('${inquiry.id}')">💾 Save</button>
+                               <button class="btn btn-danger btn-sm ms-1" onclick="deleteInquiry('${inquiry.id}', document.getElementById('email-${inquiry.id}').value)">🗑 Delete</button>`
+                    : `<div>${inquiry.message}</div>`
+                }
+                    </div>
+                    <div class="chat-bubble admin">
+                        ${inquiry.response && inquiry.response !== "No response yet"
+                    ? inquiry.response
+                    : "<span class='text-muted fst-italic'>No response yet</span>"
+                }
+                    </div>`;
+        });
+
+        container.innerHTML = chatHtml;
+        renderPagination(rowsPerPage);
+    }
+
+    function renderPagination(rowsPerPage) {
+        const totalPages = Math.ceil(currentData.length / rowsPerPage);
+        const paginationDiv = document.getElementById("pagination");
+
+        if (totalPages <= 1) {
+            paginationDiv.innerHTML = "";
+            return;
+        }
+
+        let paginationHtml = `<nav><ul class="pagination pagination-sm">`;
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                      <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
+                                   </li>`;
+        }
+        paginationHtml += `</ul></nav>`;
+        paginationDiv.innerHTML = paginationHtml;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        renderChat();
+    }
+
+    async function updateInquiry(id) {
+        const message = document.getElementById(`message-${id}`).value.trim();
+        const email = document.getElementById(`email-${id}`).value.trim();
+
+        if (!message) return alert("Message cannot be empty.");
+        if (!email) return alert("Email cannot be empty.");
+
+        try {
+            const bodyData = { id, email, message };
+            const response = await fetch(`${apiBaseUrl}/api/Inquiries/${id}/updateUserInquiry`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to update inquiry. Server said: ${errorText}`);
+            }
+
+            alert("Inquiry updated successfully!");
+            document.getElementById("searchBtn").click();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    async function deleteInquiry(id, email) {
+        if (!confirm("Delete this inquiry?")) return;
+
+        try {
+            const response = await fetch(
+                `${apiBaseUrl}/api/Inquiries/${id}/deleteUserInquiry?userEmail=${encodeURIComponent(email)}`,
+                { method: "DELETE" }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to delete inquiry. Server said: ${errorText}`);
+            }
+
+            alert("Inquiry deleted successfully!");
+            document.getElementById("searchBtn").click();
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    document.getElementById("searchBtn").addEventListener("click", () => {
+        const email = document.getElementById("emailSearch").value.trim();
+        if (!email) return alert("Please enter your email.");
+        fetchInquiries(email);
+    });
+
+    // Re-render chat on window resize to recalc rowsPerPage
+    window.addEventListener("resize", () => {
+        if (currentData.length) renderChat();
+    });
+</script>
+
+
+<style>
+  
+
+    body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center; /* horizontal centering */
+    background: #f2f2f2;
+}
+
+.chat-wrapper {
+    width: 90%;          /* almost full width */
+    max-width: 1200px;   /* restrict on very large screens */
+    min-height: 100vh;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+
+    .chat-box {
+        flex: 1;
+        border: 1px solid #eaeaea;
+        border-radius: 12px;
+        background: #f9f9f9;
+        padding: 1rem;
+        overflow: hidden; /* 🚫 no scrollbars */
+    }
+
+    .chat-bubble {
+        max-width: 70%;
+        padding: .8rem 1rem;
+        border-radius: 12px;
+        margin: .5rem 0;
+        word-wrap: break-word;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+        .chat-bubble.user {
+            align-self: flex-start;
+            background: #e6f0ff;
+            border-top-left-radius: 0;
+        }
+
+        .chat-bubble.admin {
+            align-self: flex-end;
+            background: #d4edda;
+            border-top-right-radius: 0;
+        }
+
+
+    .chat-box {
+        flex: 1;
+        padding: 1rem;
+        border: 1px solid #eaeaea;
+        border-radius: 12px;
+        background: #f9f9f9;
+    }
+
+    .chat-bubble {
+        max-width: 70%;
+        padding: .8rem 1rem;
+        border-radius: 12px;
+        margin: .5rem 0;
+        word-wrap: break-word;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+        .chat-bubble.user {
+            align-self: flex-start;
+            background: #e6f0ff;
+            border-top-left-radius: 0;
+        }
+
+        .chat-bubble.admin {
+            align-self: flex-end;
+            background: #d4edda;
+            border-top-right-radius: 0;
+        }
+
+    .btn-gradient {
+        background: linear-gradient(90deg, #007bff, #00c6ff);
+        border: none;
+        color: #fff;
+    }
+
+        .btn-gradient:hover {
+            opacity: .9;
+        }
+</style>
