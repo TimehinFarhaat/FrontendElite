@@ -28,8 +28,9 @@ public class CarsController : Controller
     // 📌 LIST ALL CARS
     public async Task<IActionResult> Index()
     {
-        var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
+        var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? _configuration["ApiSettings:BaseUrl"];
         ViewBag.ApiBaseUrl = apiBaseUrl;
+
         var result = await _carApiClient.GetAllCarsAsync();
 
         if (!result.IsSuccess)
@@ -67,8 +68,9 @@ public class CarsController : Controller
     // 📌 EDIT CAR - GET
     public async Task<IActionResult> Edit(Guid id)
     {
-        var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
+        var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? _configuration["ApiSettings:BaseUrl"];
         ViewBag.ApiBaseUrl = apiBaseUrl;
+
         var result = await _carApiClient.GetCarByIdAsync(id);
         if (!result.IsSuccess || result.Data == null)
         {
@@ -96,8 +98,9 @@ public class CarsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(Guid id, UpdateCarRequest model)
     {
-        var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ;
+        var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? _configuration["ApiSettings:BaseUrl"];
         ViewBag.ApiBaseUrl = apiBaseUrl;
+
 
         if (!ModelState.IsValid)
         {
@@ -164,8 +167,9 @@ public class CarsController : Controller
     // 📌 CAR DETAILS
     public async Task<IActionResult> Details(Guid id)
     {
-        var apiBaseUrl = _configuration["ApiSettings:BaseUrl"]; 
+        var apiBaseUrl = Environment.GetEnvironmentVariable("API_BASE_URL") ?? _configuration["ApiSettings:BaseUrl"];
         ViewBag.ApiBaseUrl = apiBaseUrl;
+
         var result = await _carApiClient.GetCarByIdAsync(id);
 
         if (!result.IsSuccess || result.Data == null)
