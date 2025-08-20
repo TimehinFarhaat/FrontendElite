@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,6 +57,12 @@ builder.Services.AddHttpClient("InquiryApiClient", client =>
 {
     client.BaseAddress = new Uri($"{apiBaseUrl}/api/inquiries/");
 }).ConfigurePrimaryHttpMessageHandler(() => handler);
+var keyPath = Path.Combine(Directory.GetCurrentDirectory(), "keys");
+Directory.CreateDirectory(keyPath);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+    .SetApplicationName("EliteCarsShared"); // must match API
 
 var app = builder.Build();
 
