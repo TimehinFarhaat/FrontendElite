@@ -79,7 +79,19 @@ Directory.CreateDirectory(keyPath);
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
-    .SetApplicationName("EliteCarsShared"); // must match API
+    .SetApplicationName("EliteCarsShared"); // same for frontend & backend
+
+
+builder.Services.AddDistributedMemoryCache(); // or Redis for distributed
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = ".EliteCars.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.None; // required for cross-site
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+    options.IdleTimeout = TimeSpan.FromHours(1);
+});
 
 
 var app = builder.Build();
